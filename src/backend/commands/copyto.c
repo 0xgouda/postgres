@@ -781,6 +781,7 @@ EndCopy(CopyToState cstate)
  * 'queryRelId': OID of base relation to convert to a query (for RLS)
  * 'filename': Name of server-local file to write, NULL for STDOUT
  * 'is_program': true if 'filename' is program to execute
+ * 'is_blackhole': true if destination is BLACKHOLE
  * 'data_dest_cb': Callback that processes the output data
  * 'attnamelist': List of char *, columns to include. NIL selects all cols.
  * 'options': List of DefElem. See copy_opt_item in gram.y for selections.
@@ -800,7 +801,7 @@ BeginCopyTo(ParseState *pstate,
 			List *options)
 {
 	CopyToState cstate;
-	bool		pipe = (filename == NULL && data_dest_cb == NULL);
+	bool		pipe = (filename == NULL && data_dest_cb == NULL && !is_blackhole);
 	TupleDesc	tupDesc;
 	int			num_phys_attrs;
 	MemoryContext oldcontext;
