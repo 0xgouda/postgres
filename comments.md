@@ -1,1 +1,1 @@
-- Why do we still write to `fe_msg` and invoke the format functions?
+- Is having `archBlackhole` as an `ArchiveFormat` logically correct? we are not doing any archiving here.
