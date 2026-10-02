@@ -441,6 +441,9 @@ pg_get_ticks_fast(void)
 #define INSTR_TIME_ADD_NANOSEC(t, n) \
 	((t).ticks += pg_ns_to_ticks(n))
 
+#define INSTR_TIME_ACCUM_SUM(x,y,z) \
+	((x).ticks += (y).ticks + (z).ticks)
+
 #define INSTR_TIME_SUBTRACT(x,y) \
 	((x).ticks -= (y).ticks)
 

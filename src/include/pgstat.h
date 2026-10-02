@@ -977,7 +977,9 @@ extern PGDLLIMPORT PgStat_CheckpointerStats PendingCheckpointerStats;
  * Variables in pgstat_database.c
  */
 
-/* Updated by pgstat_count_io_op_time() */
+/* Updated by pgstat_update_dbstats(), hold the
+ * the last snapshot of database block read/write times.
+ */
 extern PGDLLIMPORT instr_time pgStatBlockReadTime;
 extern PGDLLIMPORT instr_time pgStatBlockWriteTime;
 

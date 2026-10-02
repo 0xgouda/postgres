@@ -17,6 +17,8 @@
 
 #include "postgres.h"
 
+#include "executor/instrument.h"
+#include "portability/instr_time.h"
 #include "storage/standby.h"
 #include "utils/pgstat_internal.h"
 #include "utils/timestamp.h"
@@ -333,6 +335,8 @@ void
 pgstat_update_dbstats(TimestampTz ts)
 {
 	PgStat_StatDBEntry *dbentry;
+	instr_time	pgStatBlockReadTimeDiff;
+	instr_time	pgStatBlockWriteTimeDiff;
 
 	/*
 	 * If not connected to a database yet, don't attribute time to "shared
@@ -343,14 +347,28 @@ pgstat_update_dbstats(TimestampTz ts)
 
 	dbentry = pgstat_prep_database_pending(MyDatabaseId);
 
+	/* Get the read time diff since the last snapshot */
+	INSTR_TIME_SET_ZERO(pgStatBlockReadTimeDiff);
+	INSTR_TIME_ACCUM_SUM(pgStatBlockReadTimeDiff,
+						 pgBufferUsage.shared_blk_read_time,
+						 pgBufferUsage.local_blk_read_time);
+	INSTR_TIME_SUBTRACT(pgStatBlockReadTimeDiff, pgStatBlockReadTime);
+
+	/* Get the write time diff since the last snapshot */
+	INSTR_TIME_SET_ZERO(pgStatBlockWriteTimeDiff);
+	INSTR_TIME_ACCUM_SUM(pgStatBlockWriteTimeDiff,
+						 pgBufferUsage.shared_blk_write_time,
+						 pgBufferUsage.local_blk_write_time);
+	INSTR_TIME_SUBTRACT(pgStatBlockWriteTimeDiff, pgStatBlockWriteTime);
+
 	/*
 	 * Accumulate xact commit/rollback and I/O timings to stats entry of the
 	 * current database.
 	 */
 	dbentry->xact_commit += pgStatXactCommit;
 	dbentry->xact_rollback += pgStatXactRollback;
-	dbentry->blk_read_time += INSTR_TIME_GET_MICROSEC(pgStatBlockReadTime);
-	dbentry->blk_write_time += INSTR_TIME_GET_MICROSEC(pgStatBlockWriteTime);
+	dbentry->blk_read_time += INSTR_TIME_GET_MICROSEC(pgStatBlockReadTimeDiff);
+	dbentry->blk_write_time += INSTR_TIME_GET_MICROSEC(pgStatBlockWriteTimeDiff);
 
 	if (pgstat_should_report_connstat())
 	{
@@ -370,8 +388,8 @@ pgstat_update_dbstats(TimestampTz ts)
 
 	pgStatXactCommit = 0;
 	pgStatXactRollback = 0;
-	INSTR_TIME_SET_ZERO(pgStatBlockReadTime);
-	INSTR_TIME_SET_ZERO(pgStatBlockWriteTime);
+	INSTR_TIME_ADD(pgStatBlockReadTime, pgStatBlockReadTimeDiff);
+	INSTR_TIME_ADD(pgStatBlockWriteTime, pgStatBlockWriteTimeDiff);
 	pgStatActiveTime = 0;
 	pgStatTransactionIdleTime = 0;
 }

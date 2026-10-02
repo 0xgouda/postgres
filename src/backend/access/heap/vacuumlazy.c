@@ -656,8 +656,8 @@ heap_vacuum_rel(Relation rel, const VacuumParams *params,
 		pg_rusage_init(&ru0);
 		if (track_io_timing)
 		{
-			startreadtime = pgStatBlockReadTime;
-			startwritetime = pgStatBlockWriteTime;
+			INSTR_TIME_ACCUM_SUM(startreadtime, pgBufferUsage.shared_blk_read_time, pgBufferUsage.local_blk_read_time);
+			INSTR_TIME_ACCUM_SUM(startwritetime, pgBufferUsage.shared_blk_write_time, pgBufferUsage.local_blk_write_time);
 		}
 	}
 
@@ -1180,15 +1180,24 @@ heap_vacuum_rel(Relation rel, const VacuumParams *params,
 			}
 			if (track_io_timing)
 			{
-				instr_time	read_time = pgStatBlockReadTime;
-				instr_time	write_time = pgStatBlockWriteTime;
+				instr_time	read_time_diff;
+				instr_time	write_time_diff;
 
-				INSTR_TIME_SUBTRACT(read_time, startreadtime);
-				INSTR_TIME_SUBTRACT(write_time, startwritetime);
+				INSTR_TIME_SET_ZERO(read_time_diff);
+				INSTR_TIME_ACCUM_SUM(read_time_diff, 
+									 pgBufferUsage.shared_blk_read_time, 
+									 pgBufferUsage.local_blk_read_time);
+				INSTR_TIME_SUBTRACT(read_time_diff, startreadtime);
+
+				INSTR_TIME_SET_ZERO(write_time_diff);
+				INSTR_TIME_ACCUM_SUM(write_time_diff, 
+									 pgBufferUsage.shared_blk_write_time, 
+									 pgBufferUsage.local_blk_write_time);
+				INSTR_TIME_SUBTRACT(write_time_diff, startwritetime);
 
 				appendStringInfo(&buf, _("I/O timings: read: %.3f ms, write: %.3f ms\n"),
-								 INSTR_TIME_GET_MILLISEC(read_time),
-								 INSTR_TIME_GET_MILLISEC(write_time));
+								 INSTR_TIME_GET_MILLISEC(read_time_diff),
+								 INSTR_TIME_GET_MILLISEC(write_time_diff));
 			}
 			if (secs_dur > 0 || usecs_dur > 0)
 			{

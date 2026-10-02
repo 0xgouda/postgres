@@ -102,13 +102,10 @@ pgstat_prepare_io_time(bool track_io_guc)
 /*
  * Like pgstat_count_io_op() except it also accumulates time.
  *
- * The increments to pgStatBlockWriteTime and pgStatBlockReadTime are for
- * pg_stat_database.  As pg_stat_database only counts block read and write
- * times, these are done for IOOP_READ, IOOP_WRITE and IOOP_EXTEND.
- *
- * pgBufferUsage is used for EXPLAIN.  pgBufferUsage has write and read stats
- * for shared, local and temporary blocks.  pg_stat_io does not track the
- * activity of temporary blocks, so these are ignored here.
+ * pgBufferUsage is used for EXPLAIN and pg_stat_database.
+ * pgBufferUsage has write and read stats for shared, local and
+ * temporary blocks.  pg_stat_io does not track the activity
+ * of temporary blocks, so these are ignored here.
  */
 void
 pgstat_count_io_op_time(IOObject io_object, IOContext io_context, IOOp io_op,
@@ -125,7 +122,6 @@ pgstat_count_io_op_time(IOObject io_object, IOContext io_context, IOOp io_op,
 		{
 			if (io_op == IOOP_WRITE || io_op == IOOP_EXTEND)
 			{
-				INSTR_TIME_ADD(pgStatBlockWriteTime, io_time);
 				if (io_object == IOOBJECT_RELATION)
 					INSTR_TIME_ADD(pgBufferUsage.shared_blk_write_time, io_time);
 				else if (io_object == IOOBJECT_TEMP_RELATION)
@@ -133,7 +129,6 @@ pgstat_count_io_op_time(IOObject io_object, IOContext io_context, IOOp io_op,
 			}
 			else if (io_op == IOOP_READ)
 			{
-				INSTR_TIME_ADD(pgStatBlockReadTime, io_time);
 				if (io_object == IOOBJECT_RELATION)
 					INSTR_TIME_ADD(pgBufferUsage.shared_blk_read_time, io_time);
 				else if (io_object == IOOBJECT_TEMP_RELATION)
